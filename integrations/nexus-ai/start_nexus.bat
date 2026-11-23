@@ -52,8 +52,9 @@ if not errorlevel 1 (
 set "RELOAD_ARG="
 if /i "%NEXUS_RELOAD%"=="1" set "RELOAD_ARG=--reload"
 
-echo Starting NEXUS AI at http://%NEXUS_HOST%:%NEXUS_PORT%
-echo Keep this window open; ARTEX proxies it through /api/nexus/*.
-start "" "http://%NEXUS_HOST%:%NEXUS_PORT%/"
+echo Starting NEXUS AI at http://%NEXUS_HOST%:%NEXUS_PORT% (headless)
+echo Keep this window open. The NEXUS UI is embedded in ARTEX at /system/nexus.
+rem A standalone NEXUS browser window is opt-in; the normal launcher opens ARTEX instead.
+if /i "%NEXUS_OPEN_BROWSER%"=="1" start "" "http://%NEXUS_HOST%:%NEXUS_PORT%/"
 python run_nexus.py --host %NEXUS_HOST% --port %NEXUS_PORT% %RELOAD_ARG%
 pause

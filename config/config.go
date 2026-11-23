@@ -227,6 +227,17 @@ func NexusToken() string {
 	return strings.TrimSpace(Load().Nexus.Token)
 }
 
+// NexusUIPublicURL is the browser-reachable base URL of the NEXUS UI. It can
+// differ from NexusURL: under Docker Compose the server reaches NEXUS at
+// http://nexus:8000, but the browser must use a published loopback port.
+// Precedence: env ARTEX_NEXUS_UI_URL > NexusURL().
+func NexusUIPublicURL() string {
+	if v := strings.TrimSpace(os.Getenv("ARTEX_NEXUS_UI_URL")); v != "" {
+		return strings.TrimRight(v, "/")
+	}
+	return NexusURL()
+}
+
 // PostgresDSN resolves the connection string with precedence:
 //
 //	env ARTEX_PG_DSN  >  config file (database.dsn, or assembled from fields)

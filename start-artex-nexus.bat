@@ -3,9 +3,9 @@ setlocal enabledelayedexpansion
 title ARTEX + NEXUS AI
 cd /d "%~dp0"
 
-rem Convenience launcher: bring up the bundled NEXUS gateway, wait for its health
-rem endpoint, then start ARTEX with the proxy env vars already set. NEXUS stays on
-rem 127.0.0.1; the browser only ever talks to ARTEX on :8787.
+rem Convenience launcher: bring up the bundled NEXUS gateway headlessly, then start
+rem ARTEX and open its NEXUS AI section. NEXUS has NO standalone browser window;
+rem its UI is embedded inside ARTEX at /system/nexus. NEXUS stays on 127.0.0.1.
 set "ARTEX_NEXUS_URL=http://127.0.0.1:8000"
 set "ARTEX_NEXUS_TOKEN=%ARTEX_NEXUS_TOKEN%"
 set "ARTEX_ALL_SKILLS_VISIBLE=1"
@@ -33,5 +33,7 @@ ping -n 2 127.0.0.1 >nul 2>&1
 goto wait_nexus
 
 :nexus_ready
-echo Starting ARTEX. Open http://127.0.0.1:8787/system/nexus to check the link.
+echo Starting ARTEX. Your browser will open the embedded NEXUS section.
+rem Open ARTEX (not NEXUS) once the API is up. /api/health needs no JWT.
+start "" /min powershell -NoProfile -WindowStyle Hidden -Command "for($i=0;$i -lt 40;$i++){ try { $r=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8787/api/health' -TimeoutSec 1; if($r.StatusCode -eq 200){ Start-Process 'http://127.0.0.1:8787/system/nexus'; break } } catch {}; Start-Sleep -Seconds 1 }"
 call "%~dp0start.bat" %*

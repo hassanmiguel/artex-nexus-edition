@@ -43,6 +43,9 @@ services:
       # calls it cross-origin. Point this at the compose service below, or at a
       # NEXUS instance on the host (e.g. http://host.docker.internal:8000).
       ARTEX_NEXUS_URL: ${ARTEX_NEXUS_URL:-http://nexus:8000}
+      # Browser-facing URL for the embedded NEXUS UI iframe (the compose hostname
+      # above is only resolvable inside the docker network).
+      ARTEX_NEXUS_UI_URL: ${ARTEX_NEXUS_UI_URL:-http://127.0.0.1:8000}
       ARTEX_NEXUS_TOKEN: ${ARTEX_NEXUS_TOKEN:-}
       # Expose every SKILL.md found under ./skills to every agent. Without this,
       # skills are opt-in per agent through the Skills page / DB visibility table.
@@ -74,8 +77,10 @@ services:
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
     volumes:
       - ./integrations/nexus-ai/data:/app/data
-    expose:
-      - "8000"
+    ports:
+      # Loopback only: the embedded UI iframe in ARTEX needs a browser-reachable
+      # origin. NEXUS has no auth, so never publish this on 0.0.0.0.
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped
 
 volumes:

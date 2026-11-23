@@ -39,6 +39,7 @@ func (s *Server) nexusStatus(w http.ResponseWriter, r *http.Request) {
 	result := map[string]any{
 		"enabled":   true,
 		"url":       base,
+		"ui_url":    config.NexusUIPublicURL(),
 		"reachable": false,
 	}
 

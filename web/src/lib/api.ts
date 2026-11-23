@@ -253,6 +253,7 @@ export const api = {
     get<{
       enabled: boolean;
       url: string;
+      ui_url?: string;
       reachable: boolean;
       status?: number;
       detail?: string;

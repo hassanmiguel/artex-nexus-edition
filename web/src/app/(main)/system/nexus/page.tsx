@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { ExternalLinkIcon, RefreshCwIcon } from "lucide-react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { api } from "@/lib/api";
 interface NexusStatus {
   enabled: boolean;
   url: string;
+  ui_url?: string;
   reachable: boolean;
   status?: number;
   detail?: string;
@@ -38,13 +38,17 @@ export default function NexusPage() {
     void load();
   }, [load]);
 
+  // The embedded UI needs a browser-reachable URL, which can differ from the
+  // server-side proxy URL (e.g. http://nexus:8000 inside Docker Compose).
+  const uiBase = status?.ui_url || status?.url;
+
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 p-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">NEXUS AI</h1>
           <p className="text-muted-foreground text-sm">
-            Connected through the ARTEX server-side proxy (no browser CORS issues).
+            Embedded NEXUS workspace — the gateway runs headlessly on this machine.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
@@ -67,9 +71,15 @@ export default function NexusPage() {
               </Badge>
             </div>
             <div className="break-all">
-              <span className="text-muted-foreground">Endpoint: </span>
+              <span className="text-muted-foreground">Server endpoint: </span>
               <code>{status.url}</code>
             </div>
+            {status.ui_url && status.ui_url !== status.url ? (
+              <div className="break-all">
+                <span className="text-muted-foreground">Browser URL: </span>
+                <code>{status.ui_url}</code>
+              </div>
+            ) : null}
             {typeof status.status === "number" ? (
               <div>
                 <span className="text-muted-foreground">Health HTTP status: </span>
@@ -85,26 +95,37 @@ export default function NexusPage() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="outline"
-          onClick={() => {
-            if (!status?.url) {
-              toast.error("NEXUS URL is not available yet");
-              return;
-            }
-            window.open(status.url, "_blank", "noopener,noreferrer");
-          }}
-        >
-          <ExternalLinkIcon className="mr-2 size-4" />
-          Open NEXUS UI
-        </Button>
-      </div>
+      {status?.reachable ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-medium">NEXUS workspace</h2>
+            <a
+              href={`${uiBase}/`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground inline-flex items-center text-xs underline underline-offset-4"
+            >
+              <ExternalLinkIcon className="mr-1 size-3" />
+              Open standalone
+            </a>
+          </div>
+          <iframe
+            title="NEXUS AI"
+            src={`${uiBase}/`}
+            className="bg-background h-[75vh] w-full rounded-lg border"
+          />
+        </div>
+      ) : (
+        <div className="text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
+          NEXUS gateway is offline. Its embedded interface will appear here once the
+          gateway is running.
+        </div>
+      )}
 
       <p className="text-muted-foreground text-xs">
-        Start the bundled gateway with <code>start_nexus.bat</code> (or the
-        <code> nexus</code> Docker Compose service), then set
-        <code> ARTEX_NEXUS_URL</code> if it is not on <code>http://127.0.0.1:8000</code>.
+        The gateway runs headlessly on loopback and its interface is embedded above.
+        Access ARTEX from this same machine; to start the gateway separately, use
+        <code> start_nexus.bat</code> (or the <code>nexus</code> Compose service).
       </p>
     </div>
   );

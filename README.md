@@ -157,11 +157,13 @@ The output-language enforcement is **driven by a prompt directive (`langDirectiv
 
 ### NEXUS AI gateway (optional)
 
-A vendored copy of [NEXUS AI](integrations/nexus-ai/README.md) ships under `integrations/nexus-ai/`. ARTEX does **not** call it directly from the browser: NEXUS's CORS only allows its own `:8000` origin and it has no authentication, so the Go server exposes an authenticated, allowlisted proxy under `/api/nexus/*` instead. The UI status page lives at **System → NEXUS AI** (`/system/nexus`).
+A vendored copy of [NEXUS AI](integrations/nexus-ai/README.md) ships under `integrations/nexus-ai/`. Its interface is **embedded inside ARTEX** at **System → NEXUS AI** (`/system/nexus`) — no separate NEXUS browser window is opened. The Go server also exposes an authenticated, allowlisted API proxy under `/api/nexus/*`, because NEXUS's CORS only allows its own `:8000` origin and it has no authentication.
 
-- **Windows:** run `start-artex-nexus.bat` from the repo root. It starts the gateway on `127.0.0.1:8000`, waits for `/health`, then launches ARTEX with the right environment. `integrations/nexus-ai/start_nexus.bat` can also be run alone. It no longer force-kills whatever owns port 8000, opens an unversioned URL, or enables `--reload` by default (set `NEXUS_RELOAD=1` for dev reload).
-- **Docker Compose:** `docker compose --profile nexus up --build`. The `nexus` service is profile-gated and has **no host port published** — only ARTEX reaches it over the compose network. Pass `--profile nexus` to `down` as well.
-- **Environment:** `ARTEX_NEXUS_URL` (default `http://127.0.0.1:8000`, `http://nexus:8000` under Compose) and optional `ARTEX_NEXUS_TOKEN`. Put the token in `.env`, never in a committed config file.
+- **Windows:** run `start-artex-nexus.bat` from the repo root. It starts the gateway headlessly on `127.0.0.1:8000`, waits for `/health`, starts ARTEX, and opens `/system/nexus` in your browser. `integrations/nexus-ai/start_nexus.bat` can be run alone, but no longer opens a browser unless `NEXUS_OPEN_BROWSER=1`; it also no longer force-kills port 8000 or enables `--reload` by default (`NEXUS_RELOAD=1` opts in).
+- **Docker Compose:** `docker compose --profile nexus up --build`. The `nexus` service publishes **only to host loopback** (`127.0.0.1:8000`) so the embedded iframe can load it; never publish it on `0.0.0.0` because NEXUS has no auth. `ARTEX_NEXUS_URL` stays `http://nexus:8000` for server-side calls while `ARTEX_NEXUS_UI_URL=http://127.0.0.1:8000` is what the browser uses. Pass `--profile nexus` to `down` as well.
+- **Environment:** `ARTEX_NEXUS_URL` (server-side; default `http://127.0.0.1:8000`), `ARTEX_NEXUS_UI_URL` (browser-facing iframe URL; defaults to `ARTEX_NEXUS_URL`), and optional `ARTEX_NEXUS_TOKEN`. Put the token in `.env`, never in a committed config file.
+
+The embedded UI loads from NEXUS's own loopback origin because its HTML uses absolute `/static/*` and `/api/*` paths. That means it works when you access ARTEX from the same machine; the `/api/nexus/*` proxy remains available for ARTEX-side API calls.
 
 Reachable proxy paths: `health`, `api/status`, `api/stats`, `api/chat`, `api/chat/stream`, `api/search`, `api/dashboard`, `api/settings`, `api/tools/run`, `api/repos/ingest`, `api/review/analyze`. Anything else returns 404. `GET /api/nexus/status` is a non-throwing health check used by the UI.
 
