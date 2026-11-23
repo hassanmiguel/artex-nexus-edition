@@ -1,0 +1,10 @@
+# Keep the Docker build context small and never copy the vendored git history,
+# local database (can be >1 GB), or Python caches into the image.
+.git
+.gitignore
+data/
+**/__pycache__/
+**/*.pyc
+.venv/
+*.bat
+DEVELOPMENT_PROGRESS.md
