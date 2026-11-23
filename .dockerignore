@@ -5,6 +5,9 @@ web/out
 server/webui/dist
 /artex
 data
+**/.venv
+integrations/nexus-ai/data
+screenshots
 *.db
 transcripts
 bench/kv

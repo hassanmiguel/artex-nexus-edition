@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1
+#
+# Local development image. Unlike Dockerfile (which expects a CI-produced binary
+# in dist/<arch>/artex), this builds BOTH the static frontend and the Go binary
+# from this checkout. Use it when you change ARTEX code — e.g. the embedded NEXUS
+# UI at /system/nexus — and want the running container to actually contain it.
+#
+#   docker compose build artex
+#   docker compose up -d
+#
+# Stage 3 mirrors the release image so the runtime tooling is identical.
+
+# ---- Stage 1: static frontend export (web/out) ----
+FROM node:20-bookworm-slim AS frontend
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+ENV NEXT_EXPORT=1
+RUN npm run build
+
+# ---- Stage 2: Go server with the exported UI embedded ----
+FROM golang:1.26.3 AS backend
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+COPY --from=frontend /web/out /src/server/webui/dist
+RUN CGO_ENABLED=0 go build -tags embedui -o /out/artex ./cmd/artex
+
+# ---- Stage 3: runtime (same tools as the release image) ----
+FROM python:3.12-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates ripgrep curl wget vim git jq unzip \
+      dnsutils iputils-ping netcat-openbsd inetutils-telnet whois nmap \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+RUN npm install -g @playwright/mcp@latest @playwright/cli@latest playwright@latest \
+    && playwright-cli --help \
+    && playwright install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=backend /out/artex /app/artex
+COPY start.sh /app/start.sh
+RUN chmod +x /app/artex /app/start.sh
+COPY skills/ /app/skills/
+VOLUME ["/app/data"]
+EXPOSE 8787 8788
+ENTRYPOINT ["/app/start.sh"]
+CMD ["-addr", ":8787", "-proxy", ":8788"]

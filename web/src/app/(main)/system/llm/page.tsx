@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import {
+  ChevronDownIcon,
   Loader2Icon,
   PlugZapIcon,
   PlusIcon,
@@ -28,6 +29,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
+import { filterLLMProviders, LLM_PROVIDERS } from "@/lib/llm-providers";
 import type { LLMPoolMember, LLMPoolStatus, LLMProfile, LLMRetryOverride } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -283,6 +285,10 @@ function ProfileSheet({
   const [models, setModels] = React.useState<string[]>([]);
   const [loadingModels, setLoadingModels] = React.useState(false);
   const [modelsOpen, setModelsOpen] = React.useState(false);
+  // 공급자 프리셋: 선택하면 포맷/Base URL/추천 모델을 자동으로 채운다. Key 는 항상 직접 입력.
+  const [providerId, setProviderId] = React.useState("");
+  const [providerOpen, setProviderOpen] = React.useState(false);
+  const [providerQuery, setProviderQuery] = React.useState("");
 
   // 思考开关 / 上限字段名 / 思考强度三组选项的标签走 i18n，故在组件内按当前语言构造。
   const THINKING_TYPES: { value: string; label: string }[] = [
@@ -328,9 +334,28 @@ function ProfileSheet({
     setKeyHint(profile?.api_key_hint ?? "");
     setModels([]);
     setModelsOpen(false);
+    setProviderId("");
+    setProviderOpen(false);
+    setProviderQuery("");
   }, [open, profile]);
 
   const profileId = profile ? Number(profile.id) : undefined;
+  const selectedProvider = LLM_PROVIDERS.find((p) => p.id === providerId);
+  const filteredProviders = filterLLMProviders(providerQuery);
+
+  // 프리셋은 포맷/엔드포인트/추천 모델만 채운다. API Key 는 절대 자동 입력하지 않는다.
+  function applyProvider(id: string) {
+    const preset = LLM_PROVIDERS.find((p) => p.id === id);
+    if (!preset) return;
+    setProviderId(id);
+    setProviderOpen(false);
+    setProviderQuery("");
+    if (!name.trim()) setName(preset.name);
+    if (preset.format) setFormat(preset.format);
+    if (preset.baseUrl) setBaseUrl(preset.baseUrl);
+    if (preset.model && !model.trim()) setModel(preset.model);
+    if (preset.note) toast.info(preset.note);
+  }
 
   async function loadModels() {
     if (loadingModels) return;
@@ -444,6 +469,48 @@ function ProfileSheet({
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
+          <div className="grid gap-2">
+            <Label>Provider preset</Label>
+            <Popover open={providerOpen} onOpenChange={setProviderOpen}>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline" className="justify-between font-normal">
+                  {selectedProvider?.name ?? "Select a provider (optional)"}
+                  <ChevronDownIcon className="ml-2 size-4 opacity-60" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="gap-2 p-2" align="start">
+                <Input
+                  autoFocus
+                  value={providerQuery}
+                  onChange={(e) => setProviderQuery(e.target.value)}
+                  placeholder="Search providers…"
+                />
+                <div className="max-h-72 overflow-y-auto overscroll-contain">
+                  {filteredProviders.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      className="flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => applyProvider(preset.id)}
+                    >
+                      <span className="text-sm">{preset.name}</span>
+                      <span className="text-muted-foreground text-[11px]">
+                        {preset.category}
+                        {preset.format ? ` · ${preset.format}` : ""}
+                      </span>
+                    </button>
+                  ))}
+                  {filteredProviders.length === 0 && (
+                    <p className="text-muted-foreground p-3 text-center text-xs">No matching provider</p>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <p className="text-muted-foreground text-xs">
+              Presets fill the API format, endpoint and a suggested model. Paste your API key below.
+            </p>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="p-name">{t("profile.name.label")}</Label>
