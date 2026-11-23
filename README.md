@@ -178,6 +178,8 @@ The model configuration drawer (**System → LLM → New/Edit profile**) now has
 
 The `norma` SDK caps the skill block injected into an agent's context at 8,000 characters. With a pack this large, only the first ~33 skills get their full description; the rest appear as names only. Agents can still invoke any visible skill by name, and `ARTEX_ALL_SKILLS_VISIBLE=1` is what makes them visible in the first place.
 
+Nine pentesting workflows from [Strix](https://github.com/usestrix/strix) ship in the pack: `penetration-testing-with-strix`, `web-app-penetration-testing`, `api-security-testing`, `owasp-top-10-testing`, `application-security-testing`, `find-security-vulnerabilities-in-code`, `fix-security-vulnerabilities-with-strix`, `ci-security-scanning-with-strix`, and `managed-pentesting-with-strix`. Their upstream Apache-2.0 / `author: usestrix` frontmatter is preserved. These are workflow knowledge — the `strix` CLI is **not** bundled in the ARTEX image, so an agent needs it on its PATH (self-hosted) or a Strix cloud account to actually execute a scan.
+
 Validate the whole tree after editing any skill:
 
 ```bash
